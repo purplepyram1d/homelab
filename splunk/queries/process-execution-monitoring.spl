@@ -1,0 +1,65 @@
+| ============================================================
+| Splunk SPL — Process Execution & Attack Chain Detection
+| Sysmon EventCode 1 (Process Create) and EventCode 11 (File Create)
+| ============================================================
+
+| ── 1. ALL PROCESS CREATION (EventCode 1) ───────────────────
+| Raw process execution feed with parent context
+
+index=windows EventCode=1
+| table _time, host, User, Image, CommandLine, ParentImage
+| sort - _time
+
+
+| ── 2. SUSPICIOUS BUILT-IN TOOLS ────────────────────────────
+| Flag common LOLBins used in post-exploitation
+
+index=windows EventCode=1
+  (Image="*whoami.exe"
+   OR Image="*ipconfig.exe"
+   OR Image="*net.exe"
+   OR Image="*net1.exe"
+   OR Image="*nltest.exe"
+   OR Image="*wmic.exe"
+   OR Image="*powershell.exe")
+| table _time, User, host, CommandLine, ParentImage
+| sort - _time
+
+
+| ── 3. PROCESS NOISE CATEGORIZATION ─────────────────────────
+| Categorize top process creators for tuning
+| Run this first to identify what to baseline vs investigate
+
+index=windows earliest=-1h EventCode=1
+| eval ProcessName=mvindex(split(Image,"\\"),-1)
+| stats count by ProcessName
+| sort - count
+| head 30
+| eval Category=case(
+    match(ProcessName, "^splunk-"), "Infrastructure (Filter)",
+    ProcessName IN ("svchost.exe","taskhostw.exe","ctfmon.exe","RuntimeBroker.exe"), "Windows Services (Baseline)",
+    ProcessName IN ("MicrosoftEdgeUpdate.exe","oppldcertstorecheck.exe","MouseCoreWorker.exe"), "App Maintenance (Low Priority)",
+    ProcessName IN ("rundll32.exe","regsvr32.exe","mshta.exe"), "Investigate CommandLine",
+    match(ProcessName, "^splunk-"), "Filter",
+    1=1, "Unknown - Investigate")
+| table ProcessName, count, Category
+
+
+| ── 4. FILE CREATION (EventCode 11) ─────────────────────────
+| Track file drops — useful for detecting payload staging
+
+index=windows EventCode=11
+| table _time, host, User, Image, TargetFilename
+| sort - _time
+
+
+| ── 5. ATTACK CHAIN VISUALIZATION ───────────────────────────
+| Correlate file drop (EventCode 11) followed by execution (EventCode 1)
+| Shows attack phases in chronological order
+
+index=windows (EventCode=1 OR EventCode=11)
+| eval "Attack Phase"=case(
+    EventCode=11, "1. DROP (File Created)",
+    EventCode=1,  "2. EXECUTE (Process Run)")
+| table _time, "Attack Phase", host, User, Image, TargetFilename, CommandLine
+| sort _time

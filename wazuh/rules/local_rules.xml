@@ -1,0 +1,103 @@
+<!--
+  Wazuh Custom Detection Rules
+  Homelab: cjcs.local
+  Tested on Wazuh 4.14.0
+
+  Rules:
+    100001 - Multiple failed logons (brute force)
+    100002 - Password spray (multiple accounts)
+    100010 - LSASS memory access (credential dumping)
+    100011 - Known credential dumping tool accessing LSASS
+    100012 - Privileged account logon to DC01 (SOC 2 CC7.1)
+    100020 - RDP registry key modified
+    100021 - RDP re-enabled on executive workstation
+-->
+
+<group name="local,windows,authentication,attack">
+
+  <!-- Rule 100001: Basic failed logon counter -->
+  <!-- Triggers on 3+ EventID 4625 (failed logon) within 60 seconds -->
+  <rule id="100001" level="10" frequency="3" timeframe="60">
+    <if_matched_sid>60122</if_matched_sid>
+    <description>Multiple failed logons detected</description>
+  </rule>
+
+  <!-- Rule 100002: Password spray detection -->
+  <!-- Triggers when 5+ distinct usernames fail within 120 seconds -->
+  <!-- Maps to MITRE T1110.003 - Password Spraying -->
+  <rule id="100002" level="12" frequency="5" timeframe="120">
+    <if_matched_sid>60122</if_matched_sid>
+    <different_field>win.eventdata.targetUserName</different_field>
+    <description>Password spray detected - multiple accounts targeted</description>
+    <mitre>
+      <id>T1110.003</id>
+    </mitre>
+  </rule>
+
+</group>
+
+<group name="sysmon,credential_access,attack">
+
+  <!-- Rule 100010: LSASS memory access -->
+  <!-- Triggers on Sysmon EventID 10 (ProcessAccess) targeting lsass.exe -->
+  <!-- Maps to MITRE T1003.001 - OS Credential Dumping: LSASS Memory -->
+  <rule id="100010" level="12">
+    <if_sid>60106</if_sid>
+    <field name="win.system.eventID">^10$</field>
+    <field name="win.eventdata.targetImage" type="pcre2">(?i)lsass\.exe</field>
+    <description>LSASS process memory access detected - Potential credential dumping (T1003.001)</description>
+    <mitre>
+      <id>T1003.001</id>
+    </mitre>
+  </rule>
+
+  <!-- Rule 100011: Known credential dumping tool accessing LSASS -->
+  <!-- Chained from 100010 - fires when source process matches known tooling -->
+  <rule id="100011" level="15">
+    <if_sid>100010</if_sid>
+    <field name="win.eventdata.sourceImage" type="pcre2">(?i)(procdump|mimikatz|dumpert|nanodump|lsassy)</field>
+    <description>Known credential dumping tool accessed LSASS memory</description>
+    <mitre>
+      <id>T1003.001</id>
+    </mitre>
+  </rule>
+
+</group>
+
+<group name="local,windows,audit,privileged_access">
+
+  <!-- Rule 100012: Privileged account interactive logon to DC01 -->
+  <!-- Matches EventID 4624 LogonType 2 for named admin accounts -->
+  <!-- SOC 2 CC7.1 - Monitoring privileged access -->
+  <rule id="100012" level="12">
+    <if_sid>60106</if_sid>
+    <hostname>DC01</hostname>
+    <field name="win.eventdata.logonType">2</field>
+    <match>Administrator|CJCSAdmin|jmeintel|drodriguez</match>
+    <description>CRITICAL: Privileged Account Logon to DC01 (SOC 2 CC7.1)</description>
+  </rule>
+
+</group>
+
+<group name="rdp_monitoring">
+
+  <!-- Rule 100020: RDP registry key modified (any value) -->
+  <!-- Triggers on Sysmon EventID 13 (RegistryEvent) for fDenyTSConnections -->
+  <rule id="100020" level="3">
+    <if_group>sysmon_event_13</if_group>
+    <field name="win.eventdata.targetObject" type="pcre2">fDenyTSConnections$</field>
+    <description>RDP registry key modified: $(win.eventdata.details)</description>
+  </rule>
+
+  <!-- Rule 100021: RDP explicitly re-enabled (value set to 0) -->
+  <!-- Maps to MITRE T1021.001 - Remote Services: Remote Desktop Protocol -->
+  <rule id="100021" level="12">
+    <if_sid>100020</if_sid>
+    <field name="win.eventdata.details">DWORD \(0x00000000\)</field>
+    <description>RDP was re-enabled on executive workstation: $(win.system.computer)</description>
+    <mitre>
+      <id>T1021.001</id>
+    </mitre>
+  </rule>
+
+</group>
