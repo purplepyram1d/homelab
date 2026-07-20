@@ -1,63 +1,64 @@
-# homelab-detection-lab
+# Homelab
 
-Detection engineering lab built on a 7-VM Windows domain environment (cjcs.local). Phase 1 used Wazuh 4.14.0 for custom rule development; Phase 2 migrated to Splunk with Universal Forwarders across all Windows hosts.
+A two-host Windows Active Directory environment and a purple-team lab built on top of it, meant to reproduce the kind of environment a Windows-focused MSP/MDR shop like Huntress actually defends: a real domain, real endpoint telemetry, a SIEM, and detection rules tested against my own simulated attacks.
 
-## Environment
+The lab is the substrate. The point is the detection engineering that runs on top of it.
 
-| Host | Role | OS |
+## Hardware and network
+
+Two Dell OptiPlex 3050s, 32GB RAM each, on a single locked lab subnet `10.10.10.0/24`. Both hosts get internet over WiFi; a direct Ethernet cable between them carries the lab traffic. VMware Workstation Pro, type-2, on both, so both boxes stay usable desktops.
+
+| Host | Role | Lab IP |
 |---|---|---|
-| DC01 | Domain Controller | Windows Server 2022 |
-| APP01 | Web + DB Server | Windows Server 2022 |
-| MGR1 | Executive Workstation | Windows 11 |
-| DEV1 | Developer Workstation | Windows 11 |
-| USER1 | Standard User Workstation | Windows 11 |
-| SIEM01 | Wazuh Manager / Splunk Indexer | Ubuntu 24.04.3 |
-| Kali | Attack Platform | Kali Linux |
+| CORP | Domain estate — DC, member server, workstations | `10.10.10.10` |
+| BLUETEAM | Detection stack — SIEM, hunt platform, attacker box | `10.10.10.20` |
 
-## Repository Structure
-
-```
-wazuh/
-  rules/
-    local_rules.xml          # Custom detection rules (IDs 100001–100021)
-  config/
-    ossec-sysmon.conf        # Agent config snippet for Sysmon eventchannel ingestion
-  alert-utils/
-    alert-query.sh           # wazuhgrep / jqwazuh / live_alerts bash utilities
-
-splunk/
-  queries/
-    brute-force-detection.spl        # EventCodes 4625/4624/4672 + attack chain
-    process-execution-monitoring.spl # Sysmon EventCode 1/11 + LOLBins + chain viz
-    noise-reduction.spl              # NCSI filter, process categorization, baseline
-  diagnostic/
-    splunk-indexer-diagnostic.sh     # Linux: disk, ports, service, log tail
-    splunk-forwarder-diagnostic.ps1  # Windows: service, inputs.conf, btool, Sysmon
-```
-
-## Custom Wazuh Rules
-
-| Rule ID | Description | MITRE | Severity |
+| VM | Runs on | Lab IP | Role |
 |---|---|---|---|
-| 100001 | Brute force: 3+ failed logons in 60s | T1110.001 | High |
-| 100002 | Password spray: 5+ accounts in 120s | T1110.003 | Critical |
-| 100010 | LSASS memory access (Sysmon EventCode 10) | T1003.001 | Critical |
-| 100011 | Known credential dumping tools (mimikatz, procdump, etc.) | T1003.001 | Critical |
-| 100012 | Privileged account logon to DC01 (SOC 2 CC7.1) | — | High |
-| 100020 | RDP re-enabled via registry (fDenyTSConnections = 0) | T1021.001 | High |
-| 100021 | RDP enabled and process spawned from terminal services | T1021.001 | High |
+| DC01 | CORP | `10.10.10.11` | Windows Server 2022 — AD DS + DNS |
+| SRV01 | CORP | `10.10.10.12` | Windows Server 2022 — member server, file shares |
+| WS01 | CORP | `10.10.10.21` | Windows 11 — workstation |
+| WS02 | CORP | `10.10.10.22` | Windows 11 — workstation |
+| WAZUH01 | BLUETEAM | `10.10.10.5` | Wazuh SIEM/XDR, always-on |
+| Kali | BLUETEAM | `10.10.10.30` | attacker box |
+| RPTR01 *(in progress)* | BLUETEAM | — | Velociraptor hunt platform |
 
-## Splunk SPL Coverage
+Full detail: [docs/architecture.md](docs/architecture.md).
 
-- **Brute force**: severity tiering (MEDIUM >5, HIGH >10, CRITICAL >20 failures), attack chain correlation (fail→success)
-- **Process execution**: LOLBins detection (whoami, ipconfig, net, nltest, wmic, powershell), file drop + execution chain visualization
-- **Noise reduction**: NCSI DNS probe filter, Splunk self-monitoring process exclusion, log receipt verification
+## The domain
 
-## Related Articles
+`corp.local` (NetBIOS `CORP`), populated with [BadBlood](https://github.com/davidprowe/BadBlood) so it looks and behaves like a real company instead of an empty lab shell: roughly 2,500 users, 550 groups, and 220+ department-realistic OUs. A handful of shadow-admin accounts are planted in privileged groups on purpose, as a live "audit your privileged group membership" detection exercise.
 
-Full build documentation published on Medium [@johnnymeintel](https://medium.com/@johnnymeintel):
+More on the AD build: [docs/active-directory.md](docs/active-directory.md).
 
-- [Splunk Basics: Homelab "SOC In A Box"](https://medium.com/@johnnymeintel/splunk-basics-homelab-soc-in-a-box-b7f0d2746fdc)
-- [Splunk Homelab Noise Reduction — Part 1](https://medium.com/@johnnymeintel/splunk-homelab-noise-reduction-part-1-6a092164bbc0)
-- [Splunk Homelab Noise Reduction — Part 2](https://medium.com/@johnnymeintel/splunk-homelab-noise-reduction-part-2-db1a775a675f)
-- [Sysmon Event ID Chaining as Indicators of Compromise](https://medium.com/@johnnymeintel/sysmon-is-coming-to-windows-lets-celebrate-by-talking-about-event-id-chaining-as-indicators-of-ac0076cac754)
+## Detection platform
+
+- **Sysmon** on every Windows VM (SwiftOnSecurity baseline, moving to Olaf Hartong's modular config) — the endpoint telemetry source.
+- **Wazuh** SIEM on WAZUH01 — manager, indexer, and dashboard, with agents on every domain endpoint.
+- **Velociraptor** *(in progress)* — a hunt/DFIR layer for the things Wazuh alone can't do cleanly: rename-proof tool identification via signing certificate, and true process lineage instead of inferred parent-child pairs.
+
+More on the platform: [docs/detection-platform.md](docs/detection-platform.md).
+
+## Attacker infrastructure
+
+A Kali box on the BLUETEAM host generates the activity the rest of the stack is built to catch — RMM daisy-chain simulations, DNS attacks (zone transfer, rogue WPAD via dynamic update), and Kerberos attacks (Kerberoasting, AS-REP roasting) against the BadBlood-populated domain.
+
+## Detection engineering that runs on this lab
+
+The lab itself is the shared substrate. Individual detection projects built and tested against it get their own repos so each one stands on its own:
+
+| Project | Status | Repo |
+|---|---|---|
+| RMM multiplicity detection | Published | [rmm-multiplicity](https://github.com/purplepyram1d/rmm-multiplicity) |
+| HTB / platform writeups | Active | [Writeups](https://github.com/purplepyram1d/Writeups) |
+| BYOVD detection | Planned | — |
+| DNS attack detection (Sigma) | In progress | — |
+| Kerberos attack detection | Planned | — |
+
+## What's next
+
+Stand up Velociraptor (RPTR01), capture cert-verified RMM lineage to close out the [RMM multiplicity](https://github.com/purplepyram1d/rmm-multiplicity) write-up, then move into the BYOVD and Sigma-rule-contribution work above.
+
+## License
+
+MIT
