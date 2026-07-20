@@ -43,6 +43,11 @@ More on the platform: [docs/detection-platform.md](docs/detection-platform.md).
 
 A Kali box on the BLUETEAM host generates the activity the rest of the stack is built to catch — RMM daisy-chain simulations, DNS attacks (zone transfer, rogue WPAD via dynamic update), and Kerberos attacks (Kerberoasting, AS-REP roasting) against the BadBlood-populated domain.
 
+## Learning as I go
+
+- [docs/tips-and-tricks.md](docs/tips-and-tricks.md) — real gotchas hit building this, symptom → fix.
+- [docs/exercises.md](docs/exercises.md) — what actually gets run against this lab.
+
 ## Detection engineering that runs on this lab
 
 The lab itself is the shared substrate. Individual detection projects built and tested against it get their own repos so each one stands on its own:
