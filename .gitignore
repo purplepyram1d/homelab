@@ -1,0 +1,15 @@
+# Claude Code session artifacts
+.claude/
+
+# Editor/IDE
+.vscode/
+.idea/
+
+# OS cruft
+Thumbs.db
+desktop.ini
+.DS_Store
+
+# Logs and temp files
+*.log
+*.tmp
