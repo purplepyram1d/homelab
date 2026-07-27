@@ -1,8 +1,6 @@
 # Homelab
 
-A two-host Windows Active Directory environment and a purple-team lab built on top of it, meant to reproduce the kind of environment a Windows-focused MSP/MDR shop like Huntress actually defends: a real domain, real endpoint telemetry, a SIEM, and detection rules tested against my own simulated attacks.
-
-The lab is the substrate. The point is the detection engineering that runs on top of it.
+This is where I break things and put them back together to learn how they work.
 
 ## Hardware and network
 
