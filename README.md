@@ -55,9 +55,10 @@ The lab itself is the shared substrate. Individual detection projects built and 
 | Project | Status | Repo |
 |---|---|---|
 | RMM multiplicity detection | Published | [rmm-multiplicity](https://github.com/purplepyram1d/rmm-multiplicity) |
+| DNS attack detection | Published | [dns-attack-detection](https://github.com/purplepyram1d/dns-attack-detection) |
 | HTB / platform writeups | Active | [Writeups](https://github.com/purplepyram1d/Writeups) |
 | BYOVD detection | Planned | — |
-| DNS attack detection (Sigma) | In progress | — |
+| Sigma rule contributions (sourced from the DNS lab) | In progress | — |
 | Kerberos attack detection | Planned | — |
 
 ## What's next
