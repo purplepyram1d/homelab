@@ -50,13 +50,13 @@ A Kali box on the BLUETEAM host generates the activity the rest of the stack is 
 
 ## Detection engineering that runs on this lab
 
-The lab itself is the shared substrate. Individual detection projects built and tested against it get their own repos so each one stands on its own:
+The lab itself is the shared substrate. Substantial projects with their own sustained scope get a dedicated repo; smaller rule sets backing a single write-up live right here under [`wazuh/rules/`](wazuh/rules).
 
-| Project | Status | Repo |
+| Project | Status | Location |
 |---|---|---|
-| RMM multiplicity detection | Published | [rmm-multiplicity](https://github.com/purplepyram1d/rmm-multiplicity) |
-| DNS attack detection | Published | [dns-attack-detection](https://github.com/purplepyram1d/dns-attack-detection) |
-| HTB / platform writeups | Active | [Writeups](https://github.com/purplepyram1d/Writeups) |
+| RMM multiplicity detection | Published | [rmm-multiplicity](https://github.com/purplepyram1d/rmm-multiplicity) *(own repo)* |
+| DNS attack detection | Published | [`wazuh/rules/dns`](wazuh/rules/dns) |
+| HTB / platform writeups | Active | [Writeups](https://github.com/purplepyram1d/Writeups) *(own repo)* |
 | BYOVD detection | Planned | — |
 | Sigma rule contributions (sourced from the DNS lab) | In progress | — |
 | Kerberos attack detection | Planned | — |

@@ -1,0 +1,14 @@
+<group name="dns,windows,">
+  <rule id="100310" level="10">
+    <if_group>windows</if_group>
+    <field name="win.system.eventID">^519$</field>
+    <description>DNS dynamic update: record CREATED on $(win.system.computer)</description>
+    <mitre><id>T1584.002</id></mitre>
+  </rule>
+  <rule id="100311" level="10">
+    <if_group>windows</if_group>
+    <field name="win.system.eventID">^520$</field>
+    <description>DNS dynamic update: record DELETED on $(win.system.computer)</description>
+    <mitre><id>T1584.002</id></mitre>
+  </rule>
+</group>
