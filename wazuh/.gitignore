@@ -1,0 +1,3 @@
+# Local scratch/test outputs when working in this subtree
+*.log
+*.tmp
