@@ -1,0 +1,44 @@
+<!--
+  win_sysmon_health.xml  telemetry-health monitoring for SIEM01 (10.10.10.5)
+  Author: Claude Code, at Johnny's direction (2026-10-13). Deployed to /var/ossec/etc/rules/. Registry range 100890-100899.
+
+  Watches for Sysmon going dark the way it did on 2026-10-06, when the Sysmon64 service, driver and event channel
+  disappeared from DC01 and SRV01 with no recorded cause and nothing alerted. The Service Control Manager writes these
+  to the System channel, which every Windows agent already collects; fields confirmed from a retained event:
+  win.eventdata.param1 is the service name ("Sysmon64"), param2 is the state ("running"/"stopped").
+
+  100890 (7036 Sysmon64 stopped), level 10: opens a LabWatch incident. A normal reboot or shutdown also stops the
+  service and will open an expected incident; that is the accepted cost of never missing a stop while the host stays up
+  (the 2026-10-06 case). If reboot incidents become a nuisance, drop this to level 8 (alert only) or add a shutdown
+  correlation. 100891 (7034 terminated unexpectedly), level 12: a crash or kill, never a clean shutdown.
+
+  Honest limit: this is reactive. If Sysmon is already gone the agent still ships System-channel events, so a stop is
+  caught, but a slow failure to emit event-1 data is not. A positive heartbeat (agent-side check that the service and
+  channel exist) is the stronger control and is tracked as a separate follow-up.
+-->
+<group name="windows,system,sysmon_health,">
+
+  <rule id="100890" level="10">
+    <if_sid>61100</if_sid>
+    <field name="win.system.eventID">^7036$</field>
+    <field name="win.eventdata.param1" type="pcre2">(?i)^Sysmon(64)?$</field>
+    <field name="win.eventdata.param2" type="pcre2">(?i)^stopped$</field>
+    <description>Sysmon service ($(win.eventdata.param1)) entered the stopped state on $(win.system.computer): telemetry may be down (see the 2026-10-06 disappearance)</description>
+    <mitre>
+      <id>T1562.001</id>
+    </mitre>
+    <group>attack,sysmon_health,</group>
+  </rule>
+
+  <rule id="100891" level="12">
+    <if_sid>61100</if_sid>
+    <field name="win.system.eventID">^7034$</field>
+    <field name="win.eventdata.param1" type="pcre2">(?i)^Sysmon(64)?$</field>
+    <description>Sysmon service ($(win.eventdata.param1)) terminated unexpectedly on $(win.system.computer): not a clean shutdown</description>
+    <mitre>
+      <id>T1562.001</id>
+    </mitre>
+    <group>attack,sysmon_health,</group>
+  </rule>
+
+</group>

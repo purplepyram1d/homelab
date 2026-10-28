@@ -1,0 +1,28 @@
+[Unit]
+Description=Independent DC01/SRV01 Sysmon health-report arrival watchdog
+After=wazuh-manager.service
+
+[Service]
+Type=oneshot
+User=root
+Group=wazuh
+ExecStart=/usr/bin/python3 /opt/homelab-telemetry-watch/20261024/telemetry_watch.py
+WorkingDirectory=/var/lib/homelab-telemetry-watch
+UMask=0077
+TimeoutStartSec=30
+MemoryMax=96M
+CPUQuota=10%
+Nice=10
+IOSchedulingClass=idle
+NoNewPrivileges=true
+CapabilityBoundingSet=
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+PrivateNetwork=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+ReadWritePaths=/var/lib/homelab-telemetry-watch /var/log/homelab-telemetry-watch
+StandardOutput=journal
+StandardError=journal

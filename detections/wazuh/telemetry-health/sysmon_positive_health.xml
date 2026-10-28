@@ -1,0 +1,18 @@
+<group name="windows,sysmon_health,homelab_health,">
+  <rule id="100892" level="3">
+    <decoded_as>json</decoded_as>
+    <field name="homelab_health.kind">^sysmon$</field>
+    <field name="homelab_health.status">^ok$</field>
+    <description>Positive Sysmon service/channel/freshness heartbeat on $(homelab_health.host)</description>
+    <group>telemetry_health,</group>
+  </rule>
+  <rule id="100893" level="10">
+    <decoded_as>json</decoded_as>
+    <field name="homelab_health.kind">^sysmon$</field>
+    <field name="homelab_health.status">^fail$</field>
+    <description>Sysmon service/channel/freshness health failed on $(homelab_health.host): $(homelab_health.reason)</description>
+    <mitre><id>T1562.001</id></mitre>
+    <group>telemetry_health,</group>
+  </rule>
+</group>
+

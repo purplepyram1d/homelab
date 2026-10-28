@@ -1,0 +1,34 @@
+<group name="homelab_watch,telemetry_health,">
+  <rule id="100894" level="10">
+    <decoded_as>json</decoded_as>
+    <location type="pcre2">^/var/log/homelab-telemetry-watch/events\.jsonl$</location>
+    <field name="homelab_watch.kind">^sysmon_arrival$</field>
+    <field name="homelab_watch.observer">^siem01$</field>
+    <field name="homelab_watch.status">^stale$</field>
+    <description>Health reports missing for $(homelab_watch.target_host): more than 15 minutes without a validated Sysmon health report; cause unconfirmed</description>
+  </rule>
+  <rule id="100895" level="3">
+    <decoded_as>json</decoded_as>
+    <location type="pcre2">^/var/log/homelab-telemetry-watch/events\.jsonl$</location>
+    <field name="homelab_watch.kind">^sysmon_arrival$</field>
+    <field name="homelab_watch.observer">^siem01$</field>
+    <field name="homelab_watch.status">^recovered$</field>
+    <description>Health reports resumed for $(homelab_watch.target_host); inspect reported service status separately</description>
+  </rule>
+  <rule id="100896" level="10">
+    <decoded_as>json</decoded_as>
+    <location type="pcre2">^/var/log/homelab-telemetry-watch/events\.jsonl$</location>
+    <field name="homelab_watch.kind">^sysmon_arrival$</field>
+    <field name="homelab_watch.observer">^siem01$</field>
+    <field name="homelab_watch.status">^observer_error$</field>
+    <description>SIEM01 health arrival watchdog cannot verify its source: $(homelab_watch.reason)</description>
+  </rule>
+  <rule id="100897" level="3">
+    <decoded_as>json</decoded_as>
+    <location type="pcre2">^/var/log/homelab-telemetry-watch/events\.jsonl$</location>
+    <field name="homelab_watch.kind">^sysmon_arrival$</field>
+    <field name="homelab_watch.observer">^siem01$</field>
+    <field name="homelab_watch.status">^observer_recovered$</field>
+    <description>SIEM01 health arrival watchdog source checks recovered</description>
+  </rule>
+</group>

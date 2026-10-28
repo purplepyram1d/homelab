@@ -1,0 +1,17 @@
+__pycache__/
+*.py[cod]
+*.sqlite*
+*.db
+*.key
+*.pem
+*.pfx
+*.p12
+*.keystore
+*.credential.xml
+*.tar*
+*.tgz
+.env*
+secrets/
+runtime/
+backups/
+telemetry-watch-test-*/

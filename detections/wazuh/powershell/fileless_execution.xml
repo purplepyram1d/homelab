@@ -1,0 +1,78 @@
+<group name="sysmon,powershell,fileless,">
+
+  <!-- Fileless command execution family, IDs 100860-100869 (registry: Unquoted Service Path ends at 100859).
+       Authored 2026-10-07 from Lab 5 (LABLOG-2026-10-04): the same whoami run under three parents. Built-in
+       Sysmon event 1 base rule 61603 is level 0, so process creation reached SIEM01 and never alerted.
+       Back-tested 2026-10-07 against the full day of archives.json (3,467 Sysmon event 1 records, all agents).
+       A first draft of 100860 matched any PowerShell started by Task Scheduler and fired 414 times in one day
+       (SRV01 LabWatch ingest and the CorpDocuments scanner, both -File scripts), so it was narrowed to inline code
+       with no -File. Each condition is ONE pcre2 per field (Wazuh does not reliably AND two conditions on the
+       same field, see 100220). Separators accept native and eventchannel-escaped backslashes. -->
+
+  <!-- Path C: PowerShell started by the Task Scheduler service running inline code (-Command or -EncodedCommand,
+       not -File). Legitimate scheduled jobs here run -File scripts and stay out. -->
+  <rule id="100860" level="8">
+    <if_sid>61603</if_sid>
+    <field name="win.eventdata.image" type="pcre2">(?i)\\{1,2}powershell\.exe$</field>
+    <field name="win.eventdata.parentCommandLine" type="pcre2">(?i)svchost\.exe\s+-k\s+netsvcs.*-s\s+Schedule</field>
+    <field name="win.eventdata.commandLine" type="pcre2">(?i)^(?!.*\s-f(?:ile)?\s).*\s-(?:c|command|e|ec|enc|encodedcommand)\s</field>
+    <description>Scheduled task started PowerShell with inline code, not a script file: $(win.eventdata.commandLine)</description>
+    <mitre>
+      <id>T1053.005</id>
+      <id>T1059.001</id>
+    </mitre>
+    <group>fileless_detected,</group>
+  </rule>
+
+  <!-- Path B: PowerShell whose own command line carries Invoke-Expression or its iex alias. In process creation the
+       iex text is visible only when it is passed as an argument (cmd.exe, a script host, a web worker); typed
+       inside an open shell it never reaches this event (see 100862). -->
+  <rule id="100861" level="10">
+    <if_sid>61603</if_sid>
+    <field name="win.eventdata.image" type="pcre2">(?i)\\{1,2}powershell\.exe$</field>
+    <field name="win.eventdata.commandLine" type="pcre2">(?i)(?:^|[\s'"(;|&amp;])(?:iex|invoke-expression)(?:$|[\s'"(;|&amp;)])</field>
+    <description>PowerShell started with Invoke-Expression on the command line, parent $(win.eventdata.parentImage): $(win.eventdata.commandLine)</description>
+    <mitre>
+      <id>T1059.001</id>
+    </mitre>
+    <group>fileless_detected,</group>
+  </rule>
+
+  <!-- 100863: the pwsh.exe-parent companion to built-in 92057 (added 2026-10-13 by Claude Code, Johnny's go).
+       92057 fires only when the parent image contains powershell.exe, so it misses an encoded PowerShell command
+       whose parent is pwsh.exe (PowerShell 7, the OpenSSH default shell on SRV01 and DC01). That gap was the finding
+       behind INC-2026-0093/0094 and the capped 92057 note. This rule mirrors 92057's command-line test but anchors
+       the parent to pwsh.exe, and broadens the child to powershell.exe OR pwsh.exe so pwsh running encoded is caught
+       too. Level 12 like 92057; T1059.001. Routine agent work no longer uses -EncodedCommand (Division of Labor
+       convention, 2026-10-13), so this should be quiet in normal operation. Not live-fired yet (logtest cannot replay
+       a Windows event); the command-line regex is 92057's own, already proven in production. -->
+  <rule id="100863" level="12">
+    <if_sid>61603</if_sid>
+    <field name="win.eventdata.parentImage" type="pcre2">(?i)\\pwsh\.exe$</field>
+    <field name="win.eventdata.commandLine" type="pcre2">(?i)(?:powershell|pwsh)\.exe.+\-\b(encodedcommand|e|ea|ec|encodeda|encode|en|enco)\b</field>
+    <options>no_full_log</options>
+    <description>Encoded PowerShell command spawned by pwsh.exe (PowerShell 7), the 92057 blind spot on SRV01 and DC01: $(win.eventdata.commandLine)</description>
+    <mitre>
+      <id>T1059.001</id>
+    </mitre>
+    <group>fileless_detected,</group>
+  </rule>
+
+</group>
+
+<!-- Separate group block 2026-10-07: 100862 reads the PowerShell/Operational channel, not Sysmon, so it must not carry the sysmon group tag. -->
+<group name="powershell,fileless,">
+
+  <!-- Path A: iex typed inside an already-open shell. Only PowerShell script block logging (event 4104) records it.
+       Verified live 2026-10-07 03:33 PT on WS01 (agent group ps-logging collects event 4104). Parents 91802 (built-in script block group). -->
+  <rule id="100862" level="8">
+    <if_sid>91802</if_sid>
+    <field name="win.eventdata.scriptBlockText" type="pcre2">(?i)(?:^|[\s'"(;|&amp;])(?:iex|invoke-expression)(?:$|[\s'"(;|&amp;)])</field>
+    <description>PowerShell script block executed Invoke-Expression: $(win.eventdata.scriptBlockText)</description>
+    <mitre>
+      <id>T1059.001</id>
+    </mitre>
+    <group>fileless_detected,</group>
+  </rule>
+
+</group>

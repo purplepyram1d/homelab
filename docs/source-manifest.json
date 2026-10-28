@@ -1,0 +1,47 @@
+{
+  "observedUtc": "2026-10-27T13:22:30.716783+00:00",
+  "rules": [
+    {
+      "family": "powershell",
+      "name": "fileless_execution.xml",
+      "sha256": "ff1563ccace56db1889ecc167a4477ada433cc0d65867063920f1842116babfc",
+      "ruleIds": [
+        "100860",
+        "100861",
+        "100862",
+        "100863"
+      ]
+    },
+    {
+      "family": "telemetry-health",
+      "name": "sysmon_arrival_watch.xml",
+      "sha256": "27a4da19694acb92c1f4dce717214c0f95c81b56fd70ae74caaa84f452ca623e",
+      "ruleIds": [
+        "100894",
+        "100895",
+        "100896",
+        "100897"
+      ]
+    },
+    {
+      "family": "telemetry-health",
+      "name": "sysmon_positive_health.xml",
+      "sha256": "5c57971f4c58b649b410d6693e1d35f4681267efdac4451608bfabc4a9b816a5",
+      "ruleIds": [
+        "100892",
+        "100893"
+      ]
+    },
+    {
+      "family": "telemetry-health",
+      "name": "win_sysmon_health.xml",
+      "sha256": "efe9192e0e804b185fdbc0f5ff6a1fdde79405ad957b909232b84ca817f30383",
+      "ruleIds": [
+        "100890",
+        "100891"
+      ]
+    }
+  ],
+  "installedObserverSha256": "fd4a9a0f0278caf7e23560fb44cbff9c4a91591e032e986c967765b88914f402",
+  "note": "Exact live XML and observer bytes. Installer changed only its XML source path to the single canonical repository copy; Windows producer is the existing protected producer source."
+}
